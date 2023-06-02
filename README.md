@@ -106,7 +106,7 @@ id9 case path9/dSTR_profile.json
 
 ## GWAS
 
-### SV & CNV
+### SV & CNV & kSTR
 
 ```
 fdf<-read.table('plink.fam')
@@ -130,18 +130,15 @@ gdf<-read.table(gzfile('cnv.size.gz'))
 pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(lm(y ~ sex + age + pc1 + pc2 + pc3 + x))$coefficients;return(coef[7,-3])})))
 pdf<-cbind(gdf[,1],pdf)
 write.table(pdf,file='cnv.gwas.txt',row.names=F,col.names=F,quote=F)
-```
 
-### STR
-
-kSTR
-```
+#kSTR
 gdf<-read.table(gzfile('kSTR.genotype.gz'))
 gdf[,2]<-apply(gdf[,-1],1,function(x){wilcox.test(x~y,alternative='less')$p.value})
 write.table(gdf[,c(1,2)],file='kSTR.gwas.txt',row.names=F,col.names=F,quote=F)
 ```
 
-dSTR
+### dSTR
+
 ```
 casecontrol.py locus --manifest dSTR.list --multisample-profile dSTR.multisample_profile.json --output dSTR.GWAS.tsv
 ```

@@ -21,7 +21,7 @@ mosdepth qc sort.cram -f GRCh38.fa --fast-mode --no-per-base --by 1000000 --thre
 # SV
 lumpyexpress -P -T ./tmp -R GRCh38.fa -B sort.cram -S splitters.bam -D discordants.bam -x exclude.bed -o sv.vcf && svtyper -B sort.cram -T GRCh38.fa -i sv.vcf |gzip -f > sv.gt.vcf.gz
 # CNV
-cnvpytor -root root.pytor -rd sort.cram -T GRCh38.fa && cnvpytor -root root.pytor -his 100 && cnvpytor -root root.pytor -partition 100 && cnvpytor -root root.pytor -call 100 | perl cnv2vcf.pl -prefix id -fai GRCh38.fa.fai|bgzip -f > cnv.vcf.gz
+cnvpytor -root root.pytor -rd sort.cram -T GRCh38.fa && cnvpytor -root root.pytor -his 100 && cnvpytor -root root.pytor -partition 100 && cnvpytor -root root.pytor -call 100|perl cnv2vcf.pl -prefix id -fai GRCh38.fa.fai|bgzip -f > cnv.vcf.gz
 # STR
 ExpansionHunter --reads sort.cram --reference GRCh38.fa --variant-catalog variant_catalog.json --output-prefix ./kSTR && vawk --header '{$8="SVTYPE=DUP;"$8;print}'|bgzip -f > kSTR.vcf.gz && tabix -f -s 1 -b 2 -e 2 kSTR.vcf.gz
 ExpansionHunterDenovo profile --reads sort.cram --reference GRCh38.fa --output-prefix dSTR --min-anchor-mapq 50 --max-irr-mapq 40
@@ -41,7 +41,7 @@ cat sv.list | while read sv
 dir=`dirname $sv`
 vawk '{if(I$END-$2>100)print $1":"$2"-"I$END}'|cnvpytor -root $dir/root.pytor -genotype 100 > $sv.genotype
 vawk '{if(I$END-$2>100)print}' merged.sv.vcf|svtyper -l $sv.lib.json -B $dir/sort.cram -T GRCh38.fa -i /dev/stdin|perl cn2GT.pl > $sv.gt.vcf
-python del_pe_resolution.py $sv.lib.json | awk 'NR==2{print}'
+python del_pe_resolution.py $sv.lib.json|awk 'NR==2{print}'
 done > sv.lib.size
 
 cat sv.list|awk '{print $0".gt.vcf"}'|svtools vcfpaste -f /dev/stdin -q|svtools afreq|svtools vcftobedpe|svtools bedpesort|svtools prune -s -d 100 -e "AF"|svtools bedpetovcf|svtools classify -g sex.txt -a repeatMasker.recent.lt200millidiv.LINE_SINE_SVA.GRCh38.sorted.bed.gz -m large_sample|python geno_refine_12.py -i - -g sex.txt -d refine.dfile.txt|python filter_del.py -i - -t sv.lib.size -s 0.1|resvtyper.py -|vawk --header '{if(I$MSQ!="." && !((I$SVTYPE=="BND" && I$MSQ<250) || (I$SVTYPE=="INV" && I$MSQ<150))){print}}'|gzip -f > sv.gt.filter.vcf.gz

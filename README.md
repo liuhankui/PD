@@ -143,6 +143,6 @@ write.table(gdf[,c(1,2)],file='kSTR.gwas.txt',row.names=F,col.names=F,quote=F)
 
 dSTR
 ```
-casecontrol.py locus --manifest json.list --multisample-profile dSTR.multisample_profile.json --output dSTR.GWAS.tsv
+casecontrol.py locus --manifest dSTR.list --multisample-profile dSTR.multisample_profile.json --output dSTR.GWAS.tsv
 ```
 

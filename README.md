@@ -1,10 +1,14 @@
-# PD
 # PD GWAS
+
+
+
 # fq2cram
+```
 fastp -q 20 -u 10 -n 5 --in1 fq1.gz --in2 fq2.gz --out1 clean.fq1.gz --out2 clean.fq2.gz
 bwa mem -t 4 -R '@RG\tID:id\tPL:illumina\tPU:id\tLB:sample\tSM:id\tCN:BGI' GRCh38.fa clean.fq1.gz clean.fq2.gz|samblaster --excludeDups --ignoreUnmated --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam|samtools view -Sb -|samtools sort - -O CRAM -o sort.cram --reference GRCh38.fa
 gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam|sambamba view -S -f bam /dev/stdin|samtools sort - -O CRAM -o discordants.cram --reference GRCh38.fa
 gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam|sambamba view -S -f bam -l 0 /dev/stdin|samtools sort - -O CRAM -o splitters.cram --reference GRCh38.fa
+```
 
 # cram2depth
 mosdepth qc sort.cram -f GRCh38.fa --fast-mode --no-per-base --by 1000000 --thresholds 1,2,4,10

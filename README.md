@@ -120,7 +120,7 @@ pc3<-fdf[,10]
 #sv
 gdf<-read.table(gzfile('sv.genotype.gz'))
 gdf[gdf=='./.']<-NA
-gdf[,-1]<-as.numeric(factor(gdf[,-1],levels=c('0/0','0/1','1/1'),order=T))
+gdf[,-1]<-as.numeric(factor(gdf[,-1],levels=c('0/0','0/1','1/1'),order=T))-1
 pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(lm(y ~ sex + age + pc1 + pc2 + pc3 + x))$coefficients;return(coef[7,-3])})))
 pdf<-cbind(gdf[,1],pdf)
 write.table(pdf,file='sv.gwas.txt',row.names=F,col.names=F,quote=F)

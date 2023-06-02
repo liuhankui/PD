@@ -33,14 +33,6 @@ java -Xmx3g -jar gatk-package-4.1.2.0-local.jar HaplotypeCaller --QUIET true -R 
 
 ### SV
 
-sv.list file format：
-```
-path1/sv.vcf
-path2/sv.vcf
-......
-path9/sv.vcf
-```
-
 ```
 svtools lsort -f sv.list -t ./tmp -b 100 > sorted.sv.vcf
 svtools lmerge -i sorted.sv.vcf -f 20 -t ./tmp --sum > merged.sv.vcf
@@ -52,18 +44,19 @@ vawk '{if(I$END-$2>100)print}' merged.sv.vcf|svtyper -l $sv.lib.json -B $dir/sor
 python del_pe_resolution.py $sv.lib.json | awk 'NR==2{print}'
 done > sv.lib.size
 
-cat sv.list|awk '{print $0".gt.vcf"}'|svtools vcfpaste -f /dev/stdin -q|svtools afreq|svtools vcftobedpe|svtools bedpesort|svtools prune -s -d 100 -e "AF"|svtools bedpetovcf|svtools classify -g sex.txt -a repeatMasker.recent.lt200millidiv.LINE_SINE_SVA.GRCh38.sorted.bed.gz -m large_sample|python geno_refine_12.py -i - -g sex.txt -d refine.dfile.txt|python filter_del.py -i - -t sv.lib.size -s 0.1|resvtyper.py -|vawk --header '{if(I$MSQ!="." && !((I$SVTYPE=="BND" && I$MSQ<250) || (I$SVTYPE=="INV" && I$MSQ<150))){print}}'|gzip -f > sv.gt.filter.vcf.gz 
+cat sv.list|awk '{print $0".gt.vcf"}'|svtools vcfpaste -f /dev/stdin -q|svtools afreq|svtools vcftobedpe|svtools bedpesort|svtools prune -s -d 100 -e "AF"|svtools bedpetovcf|svtools classify -g sex.txt -a repeatMasker.recent.lt200millidiv.LINE_SINE_SVA.GRCh38.sorted.bed.gz -m large_sample|python geno_refine_12.py -i - -g sex.txt -d refine.dfile.txt|python filter_del.py -i - -t sv.lib.size -s 0.1|resvtyper.py -|vawk --header '{if(I$MSQ!="." && !((I$SVTYPE=="BND" && I$MSQ<250) || (I$SVTYPE=="INV" && I$MSQ<150))){print}}'|gzip -f > sv.gt.filter.vcf.gz
+zcat sv.gt.filter.vcf.gz|vawk '{if($8!~/SECONDARY/)print $1"_"$2"_"I$END"_"I$SVTYPE,S$*$GT}'|gzip -f > sv.genotype.gz
+```
+
+sv.list file format：
+```
+path1/sv.vcf
+path2/sv.vcf
+......
+path9/sv.vcf
 ```
 
 ### CNV
-
-cnv.list file format
-```
-path1/cnv.vcf.gz
-path2/cnv.vcf.gz
-......
-path9/cnv.vcf.gz
-```
 
 ```
 cat cnv.list|while read cnv
@@ -76,10 +69,24 @@ awk '$5=="DUP"{print $2"\t"$3"\t"$4"\t"$1"_"$4-$3}' cnv.txt|sort -k1,1 -k2,2n -k
 awk '$5=="DEL"{print $2"\t"$3"\t"$4"\t"$1"_"$4-$3}' cnv.txt|sort -k1,1 -k2,2n -k3,3n > DEL.sort.txt
 bedtools merge -i DUP.sort.txt -c 1,4 -o count,collapse > cnv.overlap.txt
 bedtools merge -i DEL.sort.txt -c 1,4 -o count,collapse >> cnv.overlap.txt
-perl cnv.combine.pl cnv.list cnv.overlap.txt > cnv.size.txt
+perl cnv.combine.pl cnv.list cnv.overlap.txt|gzip -f > cnv.size.gz
+```
+
+cnv.list file format
+```
+path1/cnv.vcf.gz
+path2/cnv.vcf.gz
+......
+path9/cnv.vcf.gz
 ```
 
 ## STR
+
+```
+bcftools merge -l kSTR.list -m all -O z -o kSTR.vcf.gz
+zcat kSTR.vcf.gz|perl str.genotype.pl|gzip -f > kSTR.genotype.gz
+ExpansionHunterDenovo merge --reference GRCh38.fa --manifest dSTR.list --output-prefix dSTR
+```
 
 kSTR.list file format
 ```
@@ -87,10 +94,6 @@ path1/kSTR.vcf.gz
 path2/kSTR.vcf.gz
 ......
 path9/kSTR.vcf.gz
-```
-
-```
-bcftools merge -l kSTR.list -m all -O z -o kSTR.vcf.gz
 ```
 
 dSTR.list file format
@@ -101,21 +104,46 @@ id2 control path2/dSTR_profile.json
 id9 case path9/dSTR_profile.json
 ```
 
-```
-ExpansionHunterDenovo merge --reference GRCh38.fa --manifest dSTR.list --output-prefix dSTR
-```
-
 ## GWAS
-### SV
+
+### SV & CNV
+
 ```
-zcat sv.gt.filter.vcf.gz|vawk '{if($8!~/SECONDARY/)print $1"_"$2"_"I$END"_"I$SVTYPE,S$*$GT}' > sv.genotype
+fdf<-read.table('plink.fam')
+y<-fdf[,6]
+sex<-fdf[,5]
+age<-fdf[,7]
+pc1<-fdf[,8]
+pc2<-fdf[,9]
+pc3<-fdf[,10]
+
+#sv
+gdf<-read.table(gzfile('sv.genotype.gz'))
+gdf[gdf=='./.']<-NA
+gdf[,-1]<-as.numeric(factor(gdf[,-1],levels=c('0/0','0/1','1/1'),order=T))
+pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(lm(y ~ sex + age + pc1 + pc2 + pc3 + x))$coefficients;return(coef[7,-3])})))
+pdf<-cbind(gdf[,1],pdf)
+write.table(pdf,file='sv.gwas.txt',row.names=F,col.names=F,quote=F)
+
+#cnv
+gdf<-read.table(gzfile('cnv.size.gz'))
+pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(lm(y ~ sex + age + pc1 + pc2 + pc3 + x))$coefficients;return(coef[7,-3])})))
+pdf<-cbind(gdf[,1],pdf)
+write.table(pdf,file='cnv.gwas.txt',row.names=F,col.names=F,quote=F)
 ```
 
-```{r}
-read.table()
+### STR
+
+kSTR
+```
+gdf<-read.table(gzfile('kSTR.genotype.gz'))
+pdf<-apply(gdf[,-1],1,function(x){wilcox.test(x~y,alternative='less')$p.value})
+pdf<-cbind(gdf[,1],pdf)
+write.table(pdf,file='kSTR.gwas.txt',row.names=F,col.names=F,quote=F)
 ```
 
-
-## STR
+dSTR
+```
 casecontrol.py locus --manifest json.list --multisample-profile dSTR.multisample_profile.json --output dSTR.GWAS.tsv
+```
 

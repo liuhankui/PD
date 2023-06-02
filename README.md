@@ -1,4 +1,4 @@
-# PD GWAS
+# PD WGS (structure variants, copy number variants,short tandem repeats) GWAS
 
 ## fq2cram
 

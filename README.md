@@ -1,8 +1,6 @@
 # PD GWAS
 
-
-
-# fq2cram
+## fq2cram
 ```
 fastp -q 20 -u 10 -n 5 --in1 fq1.gz --in2 fq2.gz --out1 clean.fq1.gz --out2 clean.fq2.gz
 bwa mem -t 4 -R '@RG\tID:id\tPL:illumina\tPU:id\tLB:sample\tSM:id\tCN:BGI' GRCh38.fa clean.fq1.gz clean.fq2.gz|samblaster --excludeDups --ignoreUnmated --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam|samtools view -Sb -|samtools sort - -O CRAM -o sort.cram --reference GRCh38.fa
@@ -10,19 +8,24 @@ gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t
 gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam|sambamba view -S -f bam -l 0 /dev/stdin|samtools sort - -O CRAM -o splitters.cram --reference GRCh38.fa
 ```
 
-# cram2depth
+## cram2depth
+```
 mosdepth qc sort.cram -f GRCh38.fa --fast-mode --no-per-base --by 1000000 --thresholds 1,2,4,10
+```
 
-# cran2variants
-## SV
+## cran2variants
+```
+# SV
+
 lumpyexpress -P -T ./tmp -R GRCh38.fa -B sort.cram -S splitters.bam -D discordants.bam -x exclude.bed -o sv.vcf && svtyper -B sort.cram -T GRCh38.fa -i sv.vcf |gzip -f > sv.gt.vcf.gz
-## CNV
+# CNV
 cnvpytor -root root.pytor -rd sort.cram -T GRCh38.fa && cnvpytor -root root.pytor -his 100 && cnvpytor -root root.pytor -partition 100 && cnvpytor -root root.pytor -call 100 | perl cnv2vcf.pl -prefix id -fai GRCh38.fa.fai|bgzip -f > cnv.vcf.gz
-## STR
+# STR
 ExpansionHunter --reads sort.cram --reference GRCh38.fa --variant-catalog variant_catalog.json --output-prefix ./kSTR && vawk --header '{$8="SVTYPE=DUP;"$8;print}'|bgzip -f > kSTR.vcf.gz && tabix -f -s 1 -b 2 -e 2 kSTR.vcf.gz
 ExpansionHunterDenovo profile --reads sort.cram --reference GRCh38.fa --output-prefix dSTR --min-anchor-mapq 50 --max-irr-mapq 40
-## SNV/INDEL
+# SNV/INDEL
 java -Xmx3g -jar gatk-package-4.1.2.0-local.jar HaplotypeCaller --QUIET true -R GRCh38.fa -I sort.cram -O gatk.gvcf.gz -ERC GVCF -A ClippingRankSumTest -A LikelihoodRankSumTest -A MappingQualityZero && java -Xmx3g -jar gatk-package-4.1.2.0-local.jar GenotypeGVCFs --QUIET true -R GRCh38.fa --variant gatk.gvcf.gz -O gatk.vcf.gz
+```
 
 # combined variants
 ## SV

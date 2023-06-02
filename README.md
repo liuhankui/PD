@@ -1,6 +1,7 @@
 # PD GWAS
 
 ## fq2cram
+
 ```
 fastp -q 20 -u 10 -n 5 --in1 fq1.gz --in2 fq2.gz --out1 clean.fq1.gz --out2 clean.fq2.gz
 bwa mem -t 4 -R '@RG\tID:id\tPL:illumina\tPU:id\tLB:sample\tSM:id\tCN:BGI' GRCh38.fa clean.fq1.gz clean.fq2.gz|samblaster --excludeDups --ignoreUnmated --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam|samtools view -Sb -|samtools sort - -O CRAM -o sort.cram --reference GRCh38.fa
@@ -9,14 +10,15 @@ gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t
 ```
 
 ## cram2depth
+
 ```
 mosdepth qc sort.cram -f GRCh38.fa --fast-mode --no-per-base --by 1000000 --thresholds 1,2,4,10
 ```
 
 ## cran2variants
+
 ```
 # SV
-
 lumpyexpress -P -T ./tmp -R GRCh38.fa -B sort.cram -S splitters.bam -D discordants.bam -x exclude.bed -o sv.vcf && svtyper -B sort.cram -T GRCh38.fa -i sv.vcf |gzip -f > sv.gt.vcf.gz
 # CNV
 cnvpytor -root root.pytor -rd sort.cram -T GRCh38.fa && cnvpytor -root root.pytor -his 100 && cnvpytor -root root.pytor -partition 100 && cnvpytor -root root.pytor -call 100 | perl cnv2vcf.pl -prefix id -fai GRCh38.fa.fai|bgzip -f > cnv.vcf.gz
@@ -27,16 +29,22 @@ ExpansionHunterDenovo profile --reads sort.cram --reference GRCh38.fa --output-p
 java -Xmx3g -jar gatk-package-4.1.2.0-local.jar HaplotypeCaller --QUIET true -R GRCh38.fa -I sort.cram -O gatk.gvcf.gz -ERC GVCF -A ClippingRankSumTest -A LikelihoodRankSumTest -A MappingQualityZero && java -Xmx3g -jar gatk-package-4.1.2.0-local.jar GenotypeGVCFs --QUIET true -R GRCh38.fa --variant gatk.gvcf.gz -O gatk.vcf.gz
 ```
 
-# combined variants
-## SV
-### sv.list file format：
-### path1/sv.vcf
-### path2/sv.vcf
-### ......
-### path9/sv.vcf
+## combined variants
 
+### SV
+
+sv.list file format：
+```
+path1/sv.vcf
+path2/sv.vcf
+......
+path9/sv.vcf
+```
+
+```
 svtools lsort -f sv.list -t ./tmp -b 100 > sorted.sv.vcf
 svtools lmerge -i sorted.sv.vcf -f 20 -t ./tmp --sum > merged.sv.vcf
+
 cat sv.list | while read sv
 dir=`dirname $sv`
 vawk '{if(I$END-$2>100)print $1":"$2"-"I$END}'|cnvpytor -root $dir/root.pytor -genotype 100 > $sv.genotype
@@ -45,14 +53,19 @@ python del_pe_resolution.py $sv.lib.json | awk 'NR==2{print}'
 done > sv.lib.size
 
 cat sv.list|awk '{print $0".gt.vcf"}'|svtools vcfpaste -f /dev/stdin -q|svtools afreq|svtools vcftobedpe|svtools bedpesort|svtools prune -s -d 100 -e "AF"|svtools bedpetovcf|svtools classify -g sex.txt -a repeatMasker.recent.lt200millidiv.LINE_SINE_SVA.GRCh38.sorted.bed.gz -m large_sample|python geno_refine_12.py -i - -g sex.txt -d refine.dfile.txt|python filter_del.py -i - -t sv.lib.size -s 0.1|resvtyper.py -|vawk --header '{if(I$MSQ!="." && !((I$SVTYPE=="BND" && I$MSQ<250) || (I$SVTYPE=="INV" && I$MSQ<150))){print}}'|gzip -f > sv.gt.filter.vcf.gz 
+```
 
-## CNV
-## cnv.list file format
-### path1/cnv.vcf.gz
-### path2/cnv.vcf.gz
-### ......
-### path9/cnv.vcf.gz
+### CNV
 
+cnv.list file format
+```
+path1/cnv.vcf.gz
+path2/cnv.vcf.gz
+......
+path9/cnv.vcf.gz
+```
+
+```
 cat cnv.list|while read cnv
 do
 id=`dirname $cnv|awk -F '/' '{print $NF}'`
@@ -64,28 +77,41 @@ awk '$5=="DEL"{print $2"\t"$3"\t"$4"\t"$1"_"$4-$3}' cnv.txt|sort -k1,1 -k2,2n -k
 bedtools merge -i DUP.sort.txt -c 1,4 -o count,collapse > cnv.overlap.txt
 bedtools merge -i DEL.sort.txt -c 1,4 -o count,collapse >> cnv.overlap.txt
 perl cnv.combine.pl cnv.list cnv.overlap.txt > cnv.size.txt
+```
 
 ## STR
-### kSTR.list file format
-### path1/kSTR.vcf.gz
-### path2/kSTR.vcf.gz
-### ......
-### path9/kSTR.vcf.gz
 
+kSTR.list file format
+```
+path1/kSTR.vcf.gz
+path2/kSTR.vcf.gz
+......
+path9/kSTR.vcf.gz
+```
+
+```
 bcftools merge -l kSTR.list -m all -O z -o kSTR.vcf.gz
+```
 
-### dSTR.list file format
-### path1/dSTR_profile.json
-### path2/dSTR_profile.json
-### ......
-### path9/dSTR_profile.json
+dSTR.list file format
+```
+id1 case path1/dSTR_profile.json
+id2 control path2/dSTR_profile.json
+......
+id9 case path9/dSTR_profile.json
+```
 
+```
 ExpansionHunterDenovo merge --reference GRCh38.fa --manifest dSTR.list --output-prefix dSTR
+```
 
-# GWAS
-## SV
+## GWAS
+### SV
+```
 zcat sv.gt.filter.vcf.gz|vawk '{if($8!~/SECONDARY/)print $1"_"$2"_"I$END"_"I$SVTYPE,S$*$GT}' > sv.genotype
 ```
+
+```{r}
 read.table()
 ```
 

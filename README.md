@@ -80,7 +80,7 @@ path2/cnv.vcf.gz
 path9/cnv.vcf.gz
 ```
 
-## STR
+### STR
 
 ```
 bcftools merge -l kSTR.list -m all -O z -o kSTR.vcf.gz
@@ -137,9 +137,8 @@ write.table(pdf,file='cnv.gwas.txt',row.names=F,col.names=F,quote=F)
 kSTR
 ```
 gdf<-read.table(gzfile('kSTR.genotype.gz'))
-pdf<-apply(gdf[,-1],1,function(x){wilcox.test(x~y,alternative='less')$p.value})
-pdf<-cbind(gdf[,1],pdf)
-write.table(pdf,file='kSTR.gwas.txt',row.names=F,col.names=F,quote=F)
+gdf[,2]<-apply(gdf[,-1],1,function(x){wilcox.test(x~y,alternative='less')$p.value})
+write.table(gdf[,c(1,2)],file='kSTR.gwas.txt',row.names=F,col.names=F,quote=F)
 ```
 
 dSTR

@@ -69,7 +69,7 @@ awk '$5=="DUP"{print $2"\t"$3"\t"$4"\t"$1"_"$4-$3}' cnv.txt|sort -k1,1 -k2,2n -k
 awk '$5=="DEL"{print $2"\t"$3"\t"$4"\t"$1"_"$4-$3}' cnv.txt|sort -k1,1 -k2,2n -k3,3n > DEL.sort.txt
 bedtools merge -i DUP.sort.txt -c 1,4 -o count,collapse > cnv.overlap.txt
 bedtools merge -i DEL.sort.txt -c 1,4 -o count,collapse >> cnv.overlap.txt
-perl cnv.combine.pl cnv.list cnv.overlap.txt|gzip -f > cnv.size.gz
+perl cnv.combine.pl -ped plink.fam cnv.overlap.txt|gzip -f > cnv.size.gz
 ```
 
 cnv.list file format
@@ -142,4 +142,15 @@ write.table(gdf[,c(1,2)],file='kSTR.gwas.txt',row.names=F,col.names=F,quote=F)
 ```
 casecontrol.py locus --manifest dSTR.list --multisample-profile dSTR.multisample_profile.json --output dSTR.GWAS.tsv
 ```
+
+plink.fam file format
+
+```
+sampleID1 sampleID1 fatherID1 motherID1 sex[1male2female] PD[1control2case] Age  PC1 PC2 PC3
+sampleID2 sampleID2 fatherID2 motherID2 sex[1male2female] PD[1control2case] Age  PC1 PC2 PC3
+......
+sampleID9 sampleID9 fatherID3 motherID3 sex[1male2female] PD[1control2case] Age  PC1 PC2 PC3
+```
+
+
 

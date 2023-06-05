@@ -1,1 +1,2 @@
- 
+SV.CNV.STR.gwas.summary.txt: The GWAS statistical summary of SVs/CNVs/STRs with a P-value < 0.005
+SV.vcf.gz：The mutated allele frequency of SVs

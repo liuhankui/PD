@@ -15,7 +15,7 @@ gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t
 mosdepth qc sort.cram -f GRCh38.fa --fast-mode --no-per-base --by 1000000 --thresholds 1,2,4,10
 ```
 
-## cran2variants
+## cram2variants
 
 ```
 # SV

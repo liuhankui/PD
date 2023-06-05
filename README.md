@@ -146,10 +146,10 @@ casecontrol.py locus --manifest dSTR.list --multisample-profile dSTR.multisample
 plink.fam file format
 
 ```
-sampleID1 sampleID1 fatherID1 motherID1 sex[1male2female] PD[1control2case] Age  PC1 PC2 PC3
-sampleID2 sampleID2 fatherID2 motherID2 sex[1male2female] PD[1control2case] Age  PC1 PC2 PC3
+sampleID1 sampleID1 fatherID1 motherID1 sex[1male2female] PD[1control2case] Age PC1 PC2 PC3
+sampleID2 sampleID2 fatherID2 motherID2 sex[1male2female] PD[1control2case] Age PC1 PC2 PC3
 ......
-sampleID9 sampleID9 fatherID3 motherID3 sex[1male2female] PD[1control2case] Age  PC1 PC2 PC3
+sampleID9 sampleID9 fatherID9 motherID9 sex[1male2female] PD[1control2case] Age PC1 PC2 PC3
 ```
 
 

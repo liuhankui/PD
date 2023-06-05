@@ -45,7 +45,7 @@ python del_pe_resolution.py $sv.lib.json|awk 'NR==2{print}'
 done > sv.lib.size
 
 cat sv.list|awk '{print $0".gt.vcf"}'|svtools vcfpaste -f /dev/stdin -q|svtools afreq|svtools vcftobedpe|svtools bedpesort|svtools prune -s -d 100 -e "AF"|svtools bedpetovcf|svtools classify -g sex.txt -a repeatMasker.recent.lt200millidiv.LINE_SINE_SVA.GRCh38.sorted.bed.gz -m large_sample|python geno_refine_12.py -i - -g sex.txt -d refine.dfile.txt|python filter_del.py -i - -t sv.lib.size -s 0.1|resvtyper.py -|vawk --header '{if(I$MSQ!="." && !((I$SVTYPE=="BND" && I$MSQ<250) || (I$SVTYPE=="INV" && I$MSQ<150))){print}}'|gzip -f > sv.gt.filter.vcf.gz
-zcat sv.gt.filter.vcf.gz|vawk '{if($8!~/SECONDARY/)print $1"_"$2"_"I$END"_"I$SVTYPE,S$*$GT}'|gzip -f > sv.genotype.gz
+zcat sv.gt.filter.vcf.gz|vawk '{if($8!~/SECONDARY/ && I$AF>0.05 && I$AF<0.95)print $1"_"$2"_"I$END"_"I$SVTYPE,S$*$GT}'|gzip -f > sv.genotype.gz
 ```
 
 sv.list file format：
@@ -121,13 +121,13 @@ pc3<-fdf[,10]
 gdf<-read.table(gzfile('sv.genotype.gz'))
 gdf[gdf=='./.']<-NA
 gdf[,-1]<-as.numeric(factor(gdf[,-1],levels=c('0/0','0/1','1/1'),order=T))-1
-pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(lm(y ~ sex + age + pc1 + pc2 + pc3 + x))$coefficients;return(coef[7,-3])})))
+pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(glm(y ~ sex + age + pc1 + pc2 + pc3 + x,family=binomial(link="logit")))$coefficients;return(coef[7,-3])})))
 pdf<-cbind(gdf[,1],pdf)
 write.table(pdf,file='sv.gwas.txt',row.names=F,col.names=F,quote=F)
 
 #cnv
 gdf<-read.table(gzfile('cnv.size.gz'))
-pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(lm(y ~ sex + age + pc1 + pc2 + pc3 + x))$coefficients;return(coef[7,-3])})))
+pdf<-as.data.frame(t(apply(gdf[,-1],1,function(x){coef<-summary(lm(y ~ sex + age + pc1 + pc2 + pc3 + x,family=binomial(link="logit")))$coefficients;return(coef[7,-3])})))
 pdf<-cbind(gdf[,1],pdf)
 write.table(pdf,file='cnv.gwas.txt',row.names=F,col.names=F,quote=F)
 

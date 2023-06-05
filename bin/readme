@@ -1,4 +1,10 @@
-Required:
+Required program:
+Shell
+R
+python
+perl
+
+Required tools:
 https://github.com/OpenGene/fastp
 https://github.com/lh3/bwa
 https://github.com/GregoryFaust/samblaster
@@ -15,7 +21,7 @@ https://github.com/cc2qe/vawk
 https://github.com/hall-lab/svtyper
 https://github.com/arq5x/bedtools2
 
-Related script：
+Required script：
 ExpansionHunterDenovo：
   casecontrol.py
 svtools：
@@ -24,7 +30,7 @@ svtools：
   filter_del.py
   
 DIY script:
-
-
-
-
+cn2GT.pl
+cnv.combine.pl
+cnv2VCF.pl
+str.genotype.pl
